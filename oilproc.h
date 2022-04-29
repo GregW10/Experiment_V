@@ -1,5 +1,5 @@
 //
-// Created by Gregor Hartl Watters on 01/04/2022.
+// Created by GregW on 01/04/2022.
 //
 
 #ifndef OILPROC_H

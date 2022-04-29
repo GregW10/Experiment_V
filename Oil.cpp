@@ -1,5 +1,5 @@
 //
-// Created by Gregor Hartl Watters on 14/03/2022.
+// Created by GregW on 14/03/2022.
 //
 
 #include "oilproc.h"

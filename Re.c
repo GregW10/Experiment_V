@@ -95,7 +95,6 @@ int main(int argc, char **argv) {
         return 1;
     }
     if (!is_numeric(*(argv + 1))) {
-        printf("bb%sbbb\n", *(argv + 1));
         errno = EINVAL;
         perror("Error");
         fprintf(stderr, "Density of the oil provided is not numeric.\n");

@@ -816,38 +816,25 @@ namespace oil {
 
     template <> char *get_home_path<char *>() {
 #ifdef _WIN32
-        char *home_path_c = getenv("USERPROFILE");
-#else
-        char *home_path_c = getenv("HOME");
-        if (home_path_c == nullptr) {
-            struct passwd *pwd;
-            uid_t uid = getuid();
-            pwd = getpwuid(uid);
-            home_path_c = pwd->pw_dir;
-        }
-#endif
-        char *retval;
-        retval = (char *) malloc(sizeof(char)*strlen(home_path_c) + 1);
-        std::memset(retval, '\0', strlen(home_path_c) + 1);
-        std::strcpy(retval, home_path_c);
-        return retval;
+    char *home_path_c = (char *) malloc(MAX_PATH);
+    HRESULT result = SHGetFolderPathA(NULL, CSIDL_PROFILE, NULL, SHGFP_TYPE_CURRENT, home_path_c);
+    if (result != S_OK) {
+        return nullptr;
     }
-
-    template <> std::string get_home_path<std::string>() {
-#ifdef _WIN32
-        char *home_path_c = getenv("USERPROFILE");
+    home_path_c = (char *) realloc(home_path_c, strlen_c(home_path_c) + 1);
+    return home_path_c;
 #else
-        char *home_path_c = getenv("HOME");
-        if (home_path_c == nullptr) {
-            struct passwd *pwd;
-            uid_t uid = getuid();
-            pwd = getpwuid(uid);
-            home_path_c = pwd->pw_dir;
-        }
+    struct passwd *pwd;
+    uid_t uid = getuid();
+    pwd = getpwuid(uid);
+    char *home_path_c = pwd->pw_dir;
+    char *retval;
+    retval = (char *) malloc(sizeof(char) * strlen(home_path_c) + 1);
+    memset(retval, '\0', strlen(home_path_c) + 1);
+    strcpy(retval, home_path_c);
+    return retval;
 #endif
-        std::string retval(home_path_c);
-        return retval;
-    }
+}
 
     int check_path(const char *path_c, const char *def_path) {
         struct stat def_test = {};

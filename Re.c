@@ -23,27 +23,20 @@ extern int errno;
 #define DAT_SIZE 192
 #define NAME_LEN 32
 
-int isdigit_c(char ch) {
-    if (ch >= 48 && ch <= 57) {
-        return 1;
-    }
-    return 0;
-    }
+inline int isdigit_c(char ch) {
+    return ch >= 48 && ch <= 57 ? 1 : 0;
+}
 
 int is_numeric(const char *str) {
-    if (str == NULL || strlen(str) == 0) {
-        return 0;
-    }
-    size_t length = strlen(str);
-    if (*str == '.') {
+    if (str == NULL || *str == 0 || *str == '.') {
         return 0;
     }
     size_t point_count = 0;
-    for (int i = 0; i < length; i++) {
-        if (isdigit_c(*(str + i)) == 0 && *(str + i) != '.') {
+    while (*str) {
+        if (isdigit_c(*str) == 0 && *str != '.') {
             return 0;
         }
-        if (*(str + i) == '.') {
+        if (*str++ == '.') {
             ++point_count;
         }
     }

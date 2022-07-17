@@ -23,8 +23,8 @@ extern int errno;
 #define DAT_SIZE 192
 #define NAME_LEN 32
 
-inline int isdigit_c(char c) {
-    return c <= 57 && c >= 48 ? 1 : 0;
+inline int isdigit_c(char ch) {
+    return ch <= 57 && ch >= 48 ? 1 : 0;
 }
 
 int is_numeric(const char *str) {

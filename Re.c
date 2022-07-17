@@ -75,6 +75,9 @@ double *calc_Re(double rho, double rho_err, double a, double a_err, double b, do
     double Re_err = Re*sqrt(pow(rho_err/rho, 2) + pow(b_err/b, 2) + pow(a_minus_b_err/(a - b), 2) + pow(eta_err/eta, 2)
                             + pow(T_err/T, 2));
     double *retval = (double *) malloc(2*sizeof(double));
+    if (retval == NULL) {
+        return retval;
+    }
     *retval = Re;
     *(retval + 1) = Re_err;
     return retval;
@@ -154,6 +157,9 @@ int main(int argc, char **argv) {
         fread(&visc, sizeof(double), 1, fp);
         fread(&v_err, sizeof(double), 1, fp);
         Re = calc_Re(rho, 0, a, a_err, b, b_err, visc, v_err, T, T_err);
+        if (Re == NULL) {
+            return 1;
+        }
         printf("\nFor the Oil run with name: %s, Reynolds number is: %lf +/- %lf\n", name, *Re, *(Re + 1));
         free(Re);
     }

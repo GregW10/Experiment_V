@@ -12,7 +12,7 @@ namespace fs = std::filesystem;
 
 int main(int argc, char *argv[]) {
     if (argc == 1) {
-        std::cerr << "Invalid number of arguments provided.\n" << std::endl;
+        std::cerr << "Invalid number of arguments provided.\n";
         return 1;
     }
     std::string home_path = oil::get_home_path<std::string>();
@@ -47,8 +47,7 @@ int main(int argc, char *argv[]) {
         if (argc == 2) {
             int retval = oil::del(dat_file_path);
             if (retval == 1) {
-                std::cerr << "Data file non-existent or not in expected location." << std::endl;
-                return retval;
+                std::cerr << "Data file non-existent or not in expected location.\n";
             }
             return retval;
         }
@@ -56,8 +55,8 @@ int main(int argc, char *argv[]) {
             try {
                 oil::Oil_run::delete_run(dat_file_path.c_str(), *(argv + 2));
             }
-            catch (std::invalid_argument &exception) {
-                std::cerr << "Data file non-existent or not in expected location." << std::endl;
+            catch (const std::invalid_argument &exception) {
+                std::cerr << "Data file non-existent or not in expected location.\n";
                 return 1;
             }
             return 0;
@@ -66,15 +65,14 @@ int main(int argc, char *argv[]) {
     else if(strcmp(*(argv + 1), "gentext") == 0) {
         int gen_ret = oil::Oil_run::gen_text(dat_file_path.c_str(), dat_text_path.c_str());
         if (gen_ret == 1) {
-            std::cout << "No .dat file found at the expected path: " << dat_file_path << std::endl;
-            std::cout << "Run the program first to generate the .dat file." << std::endl;
+            std::cerr << "No .dat file found at the expected path: " << dat_file_path << '\n';
+            std::cerr << "Run the program first to generate the .dat file.\n";
         }
         return gen_ret;
     }
     else if(strcmp(*(argv + 1), "gensample") == 0) {
-        int ret = oil::generate_sample_texts(constants.c_str(), def_graph_vars_path.c_str(),
-                                             single_run_param_path.c_str());
-        return ret;
+        return oil::generate_sample_texts(constants.c_str(), def_graph_vars_path.c_str(),
+                                          single_run_param_path.c_str());
     }
     char *freq_c = *(argv + 2);
     if (!oil::is_numeric(freq_c)) {
@@ -142,7 +140,7 @@ int main(int argc, char *argv[]) {
         latest_file.insert(0, home_path + "\\Downloads\\");
 #endif
         file_path = (char *) malloc(latest_file.size() + 1);
-        memset(file_path, '\0', latest_file.size() + 1);
+        memset(file_path, 0, latest_file.size() + 1);
         strcpy(file_path, latest_file.c_str());
         std::cout << "\nTime period file: " << latest_file << "\n" << std::endl;
     }
@@ -157,12 +155,10 @@ int main(int argc, char *argv[]) {
         GetFullPathNameA(*(argv + 1), MAX_PATH, file_path, nullptr);
 #endif
         file_path = (char *) realloc(file_path, strlen(file_path) + 1);
-
         if (stat(file_path, &buff) == -1) {
             perror("Error");
             exit(EXIT_FAILURE);
         }
-
         if (S_ISDIR(buff.st_mode)) {
             fprintf(stderr, "The file given is a directory. Program failure.");
             exit(EXIT_FAILURE);
@@ -238,10 +234,7 @@ int main(int argc, char *argv[]) {
         oil::clear_cin();
         oil::string_upper(yes_no);
     }
-    bool yes = false;
-    if (yes_no == "YES") {
-        yes = true;
-    }
+    bool yes = yes_no == "YES";
     if (yes) {
         std::cout << "\nSingle run parameters file path (specify \"auto\" to use the default path or 'q' to quit): ";
         answer.clear();

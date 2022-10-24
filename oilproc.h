@@ -128,19 +128,16 @@ namespace oil {
         std::multimap<double, double> V_t;
         static size_t check_path(const char *path) {
             struct stat def_test = {};
-            mode_t mode;
             if (stat(path, &def_test) == -1) {
                 throw std::invalid_argument("Invalid file path provided.\n");
             }
-            mode = def_test.st_mode;
-            if (S_ISDIR(mode)) {
+            if (S_ISDIR(def_test.st_mode)) {
                 throw std::invalid_argument("A path to a directory was provided.\n");
             }
             return def_test.st_size;
         }
         static size_t check_path(const std::string &path) {
-            const char *path_c = path.c_str();
-            return check_path(path_c);
+            return check_path(path.c_str());
         }
         static void check_line(const char *line_c) {
             std::regex rgx(R"(^[\w\s']+\s+=\s+-?\d+(\.\d+)?\s+#\s+[\w\d\^/\s-]+(\s+)?\r?\n?$)");
@@ -166,8 +163,8 @@ namespace oil {
         }
         static void read_path(const char *path, std::vector<double> &values, int num_lines) {
             std::ifstream file(path, std::fstream::in);
-            if (!(file.is_open()) || file.fail()) {
-                throw std::invalid_argument("Error opening file.");
+            if (!file.is_open() || !file.good()) {
+                throw std::invalid_argument("Error opening file.\n");
             }
             std::string line;
             char *line_c_str = (char *) malloc(1);
@@ -191,65 +188,61 @@ namespace oil {
             free(line_c_str);
         }
         static double mean_avg(const std::deque<double> &values) {
-            size_t size = values.size();
             double total = 0;
-            for (double value : values) {
+            for (const double &value : values) {
                 total += value;
             }
-            double mean = total / (double) size;
-            return mean;
+            return total / (double) values.size();
         }
         static double SD(const std::deque<double> &values) {
             std::deque<double> squares;
-            double square;
-            for (double val : values) {
-                squares.push_back(pow(val, 2));
+            for (const double &val : values) {
+                squares.push_back(val*val);
             }
-            double mean_of_squares = mean_avg(squares);
-            double square_of_mean = pow(mean_avg(values), 2);
-            return sqrt(mean_of_squares - square_of_mean);
+            double mean = mean_avg(values);
+            return sqrt(mean_avg(squares) - mean*mean);
         }
         static double *avg_time_diff(const std::deque<double> &times) {
             std::deque<double> diffs;
-            size_t total = times.size() - 1;
-            int count = 0;
-            for (double time : times) {
-                if (count > 0) {
-                    diffs.push_back(time - times[count - 1]);
-                }
-                count++;
+            // int count = 0;
+            // for (double time : times) {
+            //     if (count > 0) {
+            //         diffs.push_back(time - times[count - 1]);
+            //     }
+            //     count++;
+            // }
+            auto end = times.end();
+            for (auto prev_it = times.cbegin(), it = prev_it + 1; it != end; ++prev_it, ++it) {
+                diffs.push_back(*it - *prev_it);
             }
             double total_diff = 0;
-            for (double diff : diffs) {
+            for (const double &diff : diffs) {
                 total_diff += diff;
             }
-            double mean = total_diff / (double) total;
-            double sd = SD(diffs);
-            auto *retval = (double *) malloc(2*sizeof(double));
-            *retval = mean;
-            *(retval + 1) = sd;
+            double *retval = (double *) malloc(2*sizeof(double));
+            *retval = total_diff / (double) (times.size() - 1); // mean
+            *(retval + 1) = SD(diffs); // standard deviation
             return retval;
         }
         static int discard_beg(const std::deque<double> &full, int first_max_position) {
-            int result = 1;
             auto start_beg = full.begin();
-            auto end_beg = full.begin() + first_max_position;
-            auto start_rest = full.begin() + first_max_position + 1;
+            auto end_beg = start_beg + first_max_position;
+            auto start_rest = end_beg + 1;
             auto end_rest = full.end();
             std::deque<double> beg(start_beg, std::next(end_beg));
             std::deque<double> rest(start_rest, std::next(end_rest));
-            double avg_beg = mean_avg(beg);
-            double avg_rest = mean_avg(rest);
-            if (avg_beg < avg_rest) {
-                result = 0;
+            if (mean_avg(beg) < mean_avg(rest)) {
+                return 0;
             }
-            return result;
+            return 1;
         }
         static std::string string_upper(const char *str) {
-            size_t length = std::strlen(str);
+            if (str == nullptr) {
+                return {};
+            }
             std::string ret_string;
-            for (int i = 0; i < length; i++) {
-                ret_string.push_back((char) toupper(*(str + i)));
+            while (*str) {
+                ret_string.push_back((char) toupper(*str++));
             }
             return ret_string;
         }
@@ -421,7 +414,7 @@ namespace oil {
             int count_v = 0;
             bool first_time = true;
             int first_max_pos;
-            for (double voltage : channel0) {
+            for (const double &voltage : channel0) {
                 if (voltage > big && voltage > mean_v) {
                     big = voltage;
                 }
@@ -445,7 +438,7 @@ namespace oil {
             maxima.pop_front(); maxima.pop_front();
             maxima_times.pop_front(); maxima_times.pop_front();
             int count_final = 0;
-            for (double volt : maxima) {
+            for (const double &volt : maxima) {
                 V_t.insert({maxima_times[count_final], volt});
                 count_final++;
             }
@@ -473,13 +466,13 @@ namespace oil {
             *(retval + 1) = run_data.visc_err;
             return retval;
         }
-        std::multimap<double, double> get_max_V_t_map() {
+        std::multimap<double, double> get_max_V_t_map() const {
             if (!have_Vt) {
                 throw NoMapError();
             }
             return V_t;
         }
-        void display_V_t_map() {
+        void display_V_t_map() const {
             if (!have_Vt || !have_T) {
                 throw NoMapError();
             }
@@ -558,35 +551,32 @@ namespace oil {
         }
         static int delete_run(const char *path, const char *run_name) {
             struct stat def_test = {};
-            mode_t mode;
             if (stat(path, &def_test) == -1) {
                 throw std::invalid_argument("Invalid file path provided.\n");
             }
-            mode = def_test.st_mode;
-            if (S_ISDIR(mode)) {
+            if (S_ISDIR(def_test.st_mode)) {
                 throw std::invalid_argument("A path to a directory was provided.\n");
             }
-            size_t size = def_test.st_size;
-            size_t length = std::strlen(path);
-            const char *end = path + length - 4;
+            const char *end = path + std::strlen(path) - 4;
             if (std::strcmp(end, ".dat") != 0) {
-                throw std::invalid_argument("A .dat file was not provided.");
+                throw std::invalid_argument("A .dat file was not provided.\n");
             }
             std::ifstream input(path, std::fstream::in | std::fstream::binary);
             if (!input.good()) {
                 throw FileReadingFailedError();
             }
-            unsigned long num_structs = size / sizeof(data);
-            data *runs = (data *) malloc(size);
-            input.read((char *) runs, (std::streamsize) size);
+            size_t num_structs = def_test.st_size / sizeof(data);
+            data *runs = (data *) malloc(def_test.st_size);
+            input.read((char *) runs, (std::streamsize) def_test.st_size);
             input.close();
             std::ofstream output(path, std::fstream::out | std::fstream::binary | std::fstream::trunc);
             if (!output.good()) {
                 throw FileReadingFailedError();
             }
-            for (int i = 0; i < num_structs; i++) {
-                if (std::strcmp(run_name, (runs + i)->name) != 0) {
-                    output.write((char *) (runs + i), sizeof(data));
+            data *ptr = runs;
+            for (size_t i = 0; i < num_structs; i++, ++ptr) {
+                if (std::strcmp(run_name, ptr->name) != 0) {
+                    output.write((char *) ptr, sizeof(data));
                 }
             }
             output.close();
@@ -594,8 +584,7 @@ namespace oil {
             return 0;
         }
         void load_from_dat(const char *dat_file_path) {
-            size_t size = check_path(dat_file_path);
-            if (size != sizeof(data)) {
+            if (check_path(dat_file_path) != sizeof(data)) {
                 throw DataFileSizeError();
             }
             std::ifstream in(dat_file_path);
@@ -725,8 +714,9 @@ namespace oil {
                 throw std::out_of_range("You are indexing an element that does not exist.");
             }
         }
-        std::ostream &operator>>(std::ostream &out) {
-            out << "Name: " << run_data.name << "\n"
+        std::ostream &operator>>(std::ostream &out) const {
+            return out
+                << "Name: " << run_data.name << "\n"
                 << "Outer cylinder radius = " << run_data.a << " +/- " << run_data.a_err << " m\n"
                 << "Inner cylinder radius = " << run_data.b << " +/- " << run_data.b_err << " m\n"
                 << "Drum diameter = " << run_data.drum << " +/- " << run_data.drum_err << " m\n"
@@ -737,7 +727,6 @@ namespace oil {
                 << "Time period = " << run_data.T << " +/- " << run_data.T_err << " s\n"
                 << "Submergence = " << run_data.submergence << " +/- " << run_data.sub_err << " m\n"
                 << "Viscosity = " << run_data.viscosity << " +/- " << run_data.visc_err << visc_units();
-            return out;
         }
         Oil_run &operator<<(std::istream &in) {
             in.read((char *) &run_data, sizeof(data));
@@ -774,33 +763,37 @@ namespace oil {
     }
 
     void string_upper(char *str) {
-        size_t length = std::strlen(str);
-        for (int i = 0; i < length; i++) {
-            *(str + i) = (char) std::toupper(*(str + i));
+        if (str == nullptr) {
+            return;
+        }
+        while (*str) {
+            *str = (char) std::toupper(*str);
+            ++str;
         }
     }
 
     bool is_numeric(const char *str) {
-        size_t length = std::strlen(str);
-        bool is_num = true;
-        for (int i = 0; i < length; i++) {
-            if (isdigit(*(str + i)) == 0) {
-                is_num = false;
-                break;
+        if (str == nullptr) {
+            return false;
+        }
+        while (*str) {
+            if (!isdigit(*str++)) {
+                return false;
             }
         }
-        return is_num;
+        return true;
     }
 
     bool is_numeric(const std::string &str) {
-        bool is_num = true;
+        if (str.empty()) {
+            return false;
+        }
         for (const char &ch : str) {
-            if (isdigit(ch) == 0) {
-                is_num = false;
-                break;
+            if (!isdigit(ch)) {
+                return false;
             }
         }
-        return is_num;
+        return true;
     }
 
     void clear_cin() {
@@ -834,7 +827,7 @@ namespace oil {
     strcpy(retval, home_path_c);
     return retval;
 #endif
-}
+    }
 
     int check_path(const char *path_c, const char *def_path) {
         struct stat def_test = {};
@@ -898,8 +891,7 @@ namespace oil {
         if (stat(path, &test) == -1) {
             return 1;
         }
-        mode_t mode = test.st_mode;
-        if (S_ISDIR(mode)) {
+        if (S_ISDIR(test.st_mode)) {
             return 1;
         }
         if (std::remove(path) == -1) {

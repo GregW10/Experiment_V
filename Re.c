@@ -23,8 +23,8 @@ extern int errno;
 #define DAT_SIZE 192
 #define NAME_LEN 32
 
-inline int isdigit_c(char ch) {
-    return ch <= 57 && ch >= 48 ? 1 : 0;
+static inline int isdigit_g(char ch) {
+    return ch <= 57 && ch >= 48;
 }
 
 int is_numeric(const char *str) {
@@ -33,7 +33,7 @@ int is_numeric(const char *str) {
     }
     size_t point_count = 0;
     while (*str) {
-        if (isdigit_c(*str) == 0 && *str != '.') {
+        if (isdigit_g(*str) == 0 && *str != '.') {
             return 0;
         }
         if (*str++ == '.') {

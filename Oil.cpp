@@ -10,7 +10,7 @@
 
 namespace fs = std::filesystem;
 
-int main(int argc, char *argv[]) {
+int main(int argc, char **argv) {
     if (argc == 1) {
         std::cerr << "Invalid number of arguments provided.\n";
         return 1;
@@ -95,22 +95,20 @@ int main(int argc, char *argv[]) {
                             "file path.\n");
             exit(EXIT_FAILURE);
         }
-        struct dirent *entry = {};
+        struct dirent *entry;
         DIR *dir = opendir(downloads.c_str());
-
-        if ((entry = readdir(dir)) == nullptr) {
+        if (readdir(dir) == nullptr) {
             fprintf(stderr, "Downloads directory empty. Program exiting...\n");
             exit(EXIT_FAILURE);
         }
-        entry = readdir(dir); entry = readdir(dir);
+        readdir(dir);
+        entry = readdir(dir);
         latest_file = entry->d_name;
         fs::file_time_type time;
-        std::time_t ftime = 0;
         fs::file_time_type new_time;
-        std::time_t new_ftime;
         std::string not1 = ".";
         std::string not2 = "..";
-        std::string new_file = "this_is_not_a_file";
+        std::string new_file;
         std::string full_latest_file;
         std::string full_new_file;
         while ((entry = readdir(dir)) != nullptr) {
@@ -120,13 +118,16 @@ int main(int argc, char *argv[]) {
                 if (latest_file.rfind(".csv", latest_file.size() - 4) ==  std::string::npos) {
                     latest_file = new_file;
                 }
+                full_latest_file.clear();
+                full_latest_file.append(downloads);
 #ifndef _WIN32
-                full_latest_file = downloads + "/" + latest_file;
-                full_new_file = downloads + "/" + new_file;
+                full_latest_file.append("/");
 #else
-                full_latest_file = downloads + "\\" + latest_file;
-                full_new_file = downloads + "\\" + new_file;
+                full_latest_file.append("\\");
 #endif
+                full_new_file = full_latest_file;
+                full_latest_file.append(latest_file);
+                full_new_file.append(new_file);
                 time = fs::last_write_time(full_latest_file);
                 new_time = fs::last_write_time(full_new_file);
                 if (time <= new_time) {

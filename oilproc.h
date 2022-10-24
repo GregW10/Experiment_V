@@ -5,7 +5,9 @@
 #ifndef OILPROC_H
 #define OILPROC_H
 
+#ifndef _USE_MATH_DEFINES
 #define _USE_MATH_DEFINES
+#endif
 
 #include <cstdio>
 #include <string>
@@ -42,75 +44,74 @@ namespace oil {
     class Oil_run {
     private:
         class FileFormatError : public std::exception {
-            [[nodiscard]] const char *what() const noexcept {
+            [[nodiscard]] const char *what() const noexcept override {
                 return "The file format is not correct (could be due to excessively long lines).";
             }
         };
         class NoPathError : public std::exception {
-            [[nodiscard]] const char *what() const noexcept {
+            [[nodiscard]] const char *what() const noexcept override {
                 return "You must set the path for constants to be read.";
             }
         };
         class NoConstantsError : public std::exception {
-            [[nodiscard]] const char *what() const noexcept {
+            [[nodiscard]] const char *what() const noexcept override {
                 return "The read_constants() function must be called first.";
             }
         };
         class NoGradientError : public std::exception {
-            [[nodiscard]] const char *what() const noexcept {
+            [[nodiscard]] const char *what() const noexcept override {
                 return "The read_grad_vars() function must be called first.";
             }
         };
         class NoTimePeriodError : public std::exception {
-            [[nodiscard]] const char *what() const noexcept {
+            [[nodiscard]] const char *what() const noexcept override {
                 return "No time period has been supplied to this Oil_run object.";
             }
         };
         class FileWritingFailedError : public std::exception {
-            [[nodiscard]] const char *what() const noexcept {
+            [[nodiscard]] const char *what() const noexcept override {
                 return "The file could not be written to or created. Please ensure you have provided a valid parent "
                        "directory path.";
             }
         };
         class FileReadingFailedError : public std::exception {
-            [[nodiscard]] const char *what() const noexcept {
+            [[nodiscard]] const char *what() const noexcept override {
                 return "The file could not be read. Please ensure you have provided a valid path.";
             }
         };
         class NoMapError : public std::exception {
-            [[nodiscard]] const char *what() const noexcept {
+            [[nodiscard]] const char *what() const noexcept override {
                 return "No map of max. V at times t found. Please call the get_T() function.";
             }
         };
         class NoSingleRunParameters : public std::exception {
-            [[nodiscard]] const char *what() const noexcept {
+            [[nodiscard]] const char *what() const noexcept override {
                 return "Single run parameters not found. Please call the read_single_run_parameters() function.";
             }
         };
         class NoNameError : public std::exception {
-            [[nodiscard]] const char *what() const noexcept {
+            [[nodiscard]] const char *what() const noexcept override {
                 return "No name was found. Please name this object either using object[0] to access \"name\", or using the "
                        "set_name() function.";
             }
         };
         class LongNameError : public std::exception {
-            [[nodiscard]] const char *what() const noexcept {
+            [[nodiscard]] const char *what() const noexcept override {
                 return "Length of the name cannot be above 31 characters (excluding the NULL character).";
             }
         };
         class InvalidModeError : public std::exception {
-            [[nodiscard]] const char *what() const noexcept {
+            [[nodiscard]] const char *what() const noexcept override {
                 return R"(Allowed modes are: "ow" (overwrite if exists), "app" (always append) or "dn" (do nothing if
                       exists).)";
             }
         };
         class DataFileSizeError : public std::exception {
-            [[nodiscard]] const char *what() const noexcept {
+            [[nodiscard]] const char *what() const noexcept override {
                 std::string exc = "Data file size not correct. Size must be: ";
                 exc.append(std::to_string(sizeof(data)));
                 exc.append(" bytes.");
                 char *retval = (char *) malloc(exc.length() + 1);
-                std::memset(retval, '\0', exc.length() + 1);
                 std::strcpy(retval, exc.c_str());
                 return retval;
             }
@@ -118,7 +119,6 @@ namespace oil {
         std::string constants;
         bool constants_read = false;
         bool grad_read = false;
-        bool have_k = false;
         bool have_T = false;
         bool have_Vt = false;
         bool single_param_read = false;
@@ -204,13 +204,6 @@ namespace oil {
         }
         static double *avg_time_diff(const std::deque<double> &times) {
             std::deque<double> diffs;
-            // int count = 0;
-            // for (double time : times) {
-            //     if (count > 0) {
-            //         diffs.push_back(time - times[count - 1]);
-            //     }
-            //     count++;
-            // }
             auto end = times.end();
             for (auto prev_it = times.cbegin(), it = prev_it + 1; it != end; ++prev_it, ++it) {
                 diffs.push_back(*it - *prev_it);
@@ -269,23 +262,20 @@ namespace oil {
             double viscosity;
             double visc_err;
         } data;
-        data run_data;
+        data run_data{};
     public:
         Oil_run() {
             std::memset(run_data.name, '\0', max_name_size);
-            run_data = {};
         }
         explicit Oil_run(const std::string &constants_path) {
             check_path(constants_path);
             constants.append(constants_path);
             std::memset(run_data.name, '\0', max_name_size);
-            run_data = {};
         }
         explicit Oil_run(const char *constants_path) {
             check_path(constants_path);
             constants.append(constants_path);
             std::memset(run_data.name, '\0', max_name_size);
-            run_data = {};
         }
         void set_constants_path(const std::string &constants_path) {
             constants_read = false;
@@ -353,7 +343,6 @@ namespace oil {
             run_data.k = (c/eta)*run_data.intercept;
             run_data.k_err = run_data.k*sqrt(pow(c_err/c, 2) + pow(eta_err/eta, 2) +
                                              pow(run_data.intercept_err/run_data.intercept, 2));
-            have_k = true;
             return retval;
         }
         void read_single_run_parameters(const char *path) {
@@ -400,7 +389,7 @@ namespace oil {
                 }
                 int count_w = 0;
                 std::string writing;
-                for (double time: all_times) {
+                for (const double &time: all_times) {
                     writing = std::to_string(time) + "," + std::to_string(channel0[count_w]) + "\n";
                     fputs(writing.c_str(), toWrite);
                     count_w++;
@@ -502,7 +491,7 @@ namespace oil {
                 return 0;
             }
             if (file.st_size == 0 || mode == "APP") {
-                perhaps: {
+                perhaps:
                 std::ofstream stream(path_c, std::fstream::out | std::fstream::binary | std::fstream::app);
                 if (!stream.good()) {
                     throw FileWritingFailedError();
@@ -510,26 +499,25 @@ namespace oil {
                 stream.write((char *) &run_data, sizeof(data));
                 stream.close();
                 return 1;
-            };
             }
             std::ifstream stream(path_c, std::fstream::in | std::fstream::binary);
             if (!stream.good()) {
                 throw FileWritingFailedError();
             }
             size_t file_size = file.st_size;
-            unsigned long int num_structs = file_size / sizeof(data);
+            size_t num_structs = file_size / sizeof(data);
             data *runs = (data *) malloc(file_size);
             stream.read((char *) runs, (std::streamsize) file_size);
             stream.close();
-            bool ow = false;
-            int ow_count = 0;
-            for (int i = 0; i < num_structs; i++) {
-                if (std::strcmp(run_data.name, (runs + i)->name) == 0) {
+            size_t ow_count = 0;
+            data *ptr = runs;
+            for (size_t i = 0; i < num_structs; ++i, ++ptr) {
+                if (std::strcmp(run_data.name, ptr->name) == 0) {
                     if (mode == "DN") {
                         return 3;
                     }
                     else if (mode == "OW") {
-                        *(runs + i) = run_data;
+                        *ptr = run_data;
                         ow_count++;
                     }
                 }
@@ -611,10 +599,10 @@ namespace oil {
             }
             size_t num_structs = info.st_size / sizeof(data);
             oil::Oil_run run;
-            for (int i = 0; i < num_structs; i++) {
+            for (size_t i = 0; i < num_structs; i++) {
                 run << input_file;
                 run >> output_file;
-                output_file << "\n\n" << std::endl;
+                output_file << "\n\n\n";
             }
             input_file.close();
             output_file.close();
@@ -748,11 +736,11 @@ namespace oil {
         }
     };
 
-    std::ostream &operator<<(std::ostream &out, oil::Oil_run run) {
+    std::ostream &operator<<(std::ostream &out, const oil::Oil_run &run) {
         return run >> out;
     }
 
-    Oil_run &operator>>(std::istream &in, oil::Oil_run run) {
+    Oil_run &operator>>(std::istream &in, oil::Oil_run &run) {
         return run << in;
     }
 
@@ -803,29 +791,40 @@ namespace oil {
 
     template <typename PATH>
     PATH get_home_path() {
-        PATH retval = nullptr;
-        return retval;
+        return {};
     }
 
     template <> char *get_home_path<char *>() {
 #ifdef _WIN32
-    char *home_path_c = (char *) malloc(MAX_PATH);
-    HRESULT result = SHGetFolderPathA(NULL, CSIDL_PROFILE, NULL, SHGFP_TYPE_CURRENT, home_path_c);
-    if (result != S_OK) {
-        return nullptr;
-    }
-    home_path_c = (char *) realloc(home_path_c, strlen_c(home_path_c) + 1);
-    return home_path_c;
+        char *home_path_c = (char *) malloc(MAX_PATH);
+        if (SHGetFolderPathA(NULL, CSIDL_PROFILE, NULL, SHGFP_TYPE_CURRENT, home_path_c) != S_OK) {
+            return nullptr;
+        }
+        home_path_c = (char *) realloc(home_path_c, strlen_c(home_path_c) + 1);
+        return home_path_c;
 #else
-    struct passwd *pwd;
-    uid_t uid = getuid();
-    pwd = getpwuid(uid);
-    char *home_path_c = pwd->pw_dir;
-    char *retval;
-    retval = (char *) malloc(sizeof(char) * strlen(home_path_c) + 1);
-    memset(retval, '\0', strlen(home_path_c) + 1);
-    strcpy(retval, home_path_c);
-    return retval;
+        struct passwd *pwd;
+        uid_t uid = getuid();
+        pwd = getpwuid(uid);
+        char *retval;
+        retval = (char *) malloc(sizeof(char)*(strlen(pwd->pw_dir) + 1));
+        strcpy(retval, pwd->pw_dir);
+        return retval;
+#endif
+    }
+
+    template <> std::string get_home_path<std::string>() {
+#ifdef _WIN32
+        char home_path_c[MAX_PATH];
+        if (SHGetFolderPathA(NULL, CSIDL_PROFILE, NULL, SHGFP_TYPE_CURRENT, home_path_c) != S_OK) {
+            return {};
+        }
+        return {home_path_c};
+#else
+        struct passwd *pwd;
+        uid_t uid = getuid();
+        pwd = getpwuid(uid);
+        return {pwd->pw_dir};
 #endif
     }
 

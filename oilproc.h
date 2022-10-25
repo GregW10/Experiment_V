@@ -576,7 +576,7 @@ namespace oil {
                 throw DataFileSizeError();
             }
             std::ifstream in(dat_file_path);
-            *this << in;
+            in >> *this;
             in.close();
         }
         static int gen_text(const char *input_path_c, const char *output_path_c, bool open = true) {
@@ -600,8 +600,8 @@ namespace oil {
             size_t num_structs = info.st_size / sizeof(data);
             oil::Oil_run run;
             for (size_t i = 0; i < num_structs; i++) {
-                run << input_file;
-                run >> output_file;
+                input_file >> run;
+                output_file << run;
                 output_file << "\n\n\n";
             }
             input_file.close();
@@ -619,13 +619,14 @@ namespace oil {
         [[nodiscard]] [[maybe_unused]] data get_data_struct_cp() const {
             return run_data;
         }
-        [[nodiscard]] static std::string visc_units() {
-            std::string units = " kg m^-1 s^-1";
+        [[nodiscard]] static const char *visc_units() {
+            static const char units[] = " kg m^-1 s^-1";
             return units;
         }
         static void print_member_names() {
-            std::cout << "name\na\na_err\nb\nb_err\ndrum\ndrum_err\nMT_v_l_slope\nMT_v_l_slope_err\nintercept\nintercept_er"
-                      << "r\nk\nk_err\nmass\nmass_err\nT\nT_err\nsubmergence\nsub_err\nviscosity\nvisc_err" << std::endl;
+            std::cout << "name\na\na_err\nb\nb_err\ndrum\ndrum_err\nMT_v_l_slope\nMT_v_l_slope_err\nintercept\n"
+                         "intercept_err\nk\nk_err\nmass\nmass_err\nT\nT_err\nsubmergence\nsub_err\nviscosity\nvisc_err"
+                      << std::endl;
         }
         double *operator[](const char *element) {
             std::string elem = string_upper(element);
@@ -694,7 +695,7 @@ namespace oil {
                                         "the \"name\" member.");
             }
         }
-        char *operator[](int index) {
+        char *operator[](const int &index) {
             if (index == 0) {
                 return run_data.name;
             }
@@ -702,46 +703,48 @@ namespace oil {
                 throw std::out_of_range("You are indexing an element that does not exist.");
             }
         }
-        std::ostream &operator>>(std::ostream &out) const {
-            return out
-                << "Name: " << run_data.name << "\n"
-                << "Outer cylinder radius = " << run_data.a << " +/- " << run_data.a_err << " m\n"
-                << "Inner cylinder radius = " << run_data.b << " +/- " << run_data.b_err << " m\n"
-                << "Drum diameter = " << run_data.drum << " +/- " << run_data.drum_err << " m\n"
-                << "MT vs l slope = " << run_data.MT_v_l_slope << " +/- " << run_data.MT_v_l_slope_err << " kg s m^-1\n"
-                << "MT vs l intercept = " << run_data.intercept << " +/- " << run_data.intercept_err << " kg s\n"
-                << "k correction factor = " << run_data.k << " +/- " << run_data.k_err << " m\n"
-                << "Mass on balances = " << run_data.mass << " +/- " << run_data.mass_err << " kg\n"
-                << "Time period = " << run_data.T << " +/- " << run_data.T_err << " s\n"
-                << "Submergence = " << run_data.submergence << " +/- " << run_data.sub_err << " m\n"
-                << "Viscosity = " << run_data.viscosity << " +/- " << run_data.visc_err << visc_units();
+        char *operator[](const int &&index) {
+            return (*this)[index];
         }
-        Oil_run &operator<<(std::istream &in) {
-            in.read((char *) &run_data, sizeof(data));
-            return *this;
-        }
-        Oil_run &operator<<(data runData) {
-            strcpy(this->run_data.name, runData.name);
-            this->run_data.a = runData.a; this->run_data.a_err = runData.a_err;
-            this->run_data.b = runData.b; this->run_data.b_err = runData.b_err;
-            this->run_data.drum = runData.drum; this->run_data.drum_err = runData.drum_err;
-            this->run_data.MT_v_l_slope = runData.MT_v_l_slope; this->run_data.MT_v_l_slope_err = runData.MT_v_l_slope_err;
-            this->run_data.intercept = runData.intercept; this->run_data.intercept_err = runData.intercept_err;
-            this->run_data.k = runData.k; this->run_data.k_err = runData.k_err;
-            this->run_data.mass = runData.mass; this->run_data.mass_err = runData.mass_err;
-            this->run_data.T = runData.T; this->run_data.T_err = runData.T_err;
-            this->run_data.submergence = runData.submergence; this->run_data.sub_err = runData.sub_err;
-            this->run_data.viscosity = runData.viscosity; this->run_data.visc_err = runData.visc_err;
-            return *this;
-        }
+        friend std::ostream &operator<<(std::ostream &out, const Oil_run &run);
+        friend Oil_run &operator>>(std::istream &in, Oil_run &run);
+        friend Oil_run &operator>>(const data &runData, Oil_run &run);
     };
 
     std::ostream &operator<<(std::ostream &out, const oil::Oil_run &run) {
-        return run >> out;
+        return out
+                << "Name: " << run.run_data.name << "\n"
+                << "Outer cylinder radius = " << run.run_data.a << " +/- " << run.run_data.a_err << " m\n"
+                << "Inner cylinder radius = " << run.run_data.b << " +/- " << run.run_data.b_err << " m\n"
+                << "Drum diameter = " << run.run_data.drum << " +/- " << run.run_data.drum_err << " m\n"
+                << "MT vs l slope = " << run.run_data.MT_v_l_slope << " +/- " << run.run_data.MT_v_l_slope_err
+                << " kg s m^-1\n" << "MT vs l intercept = " << run.run_data.intercept << " +/- "
+                << run.run_data.intercept_err << " kg s\n" << "k correction factor = " << run.run_data.k << " +/- "
+                << run.run_data.k_err << " m\n" << "Mass on balances = " << run.run_data.mass << " +/- "
+                << run.run_data.mass_err << " kg\n" << "Time period = " << run.run_data.T << " +/- "
+                << run.run_data.T_err << " s\n" << "Submergence = " << run.run_data.submergence << " +/- "
+                << run.run_data.sub_err << " m\n" << "Viscosity = " << run.run_data.viscosity << " +/- "
+                << run.run_data.visc_err << Oil_run::visc_units();
     }
 
     Oil_run &operator>>(std::istream &in, oil::Oil_run &run) {
-        return run << in;
+        in.read((char *) &run.run_data, sizeof(Oil_run::data));
+        return run;
+    }
+
+    Oil_run &operator>>(const Oil_run::data &runData, Oil_run &run) {
+        strcpy(run.run_data.name, runData.name);
+        run.run_data.a = runData.a; run.run_data.a_err = runData.a_err;
+        run.run_data.b = runData.b; run.run_data.b_err = runData.b_err;
+        run.run_data.drum = runData.drum; run.run_data.drum_err = runData.drum_err;
+        run.run_data.MT_v_l_slope = runData.MT_v_l_slope; run.run_data.MT_v_l_slope_err = runData.MT_v_l_slope_err;
+        run.run_data.intercept = runData.intercept; run.run_data.intercept_err = runData.intercept_err;
+        run.run_data.k = runData.k; run.run_data.k_err = runData.k_err;
+        run.run_data.mass = runData.mass; run.run_data.mass_err = runData.mass_err;
+        run.run_data.T = runData.T; run.run_data.T_err = runData.T_err;
+        run.run_data.submergence = runData.submergence; run.run_data.sub_err = runData.sub_err;
+        run.run_data.viscosity = runData.viscosity; run.run_data.visc_err = runData.visc_err;
+        return run;
     }
 
     void string_upper(std::string &str) {

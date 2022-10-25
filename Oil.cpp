@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
             fprintf(stderr, "Downloads directory empty. Program exiting...\n");
             exit(EXIT_FAILURE);
         }
-        readdir(dir);
+        readdir(dir); // the two initial calls to readdir() read the "." and ".." directories
         entry = readdir(dir);
         latest_file = entry->d_name;
         fs::file_time_type time;
